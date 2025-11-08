@@ -22,12 +22,12 @@ module coin::coin {
     }
 
     #[allow(lint(self_transfer))]
-    public fun mintCoinObject(cap: &mut coin::TreasuryCap<COIN>, amount: u64, ctx: &mut TxContext){
+    public entry fun mintCoinObject(cap: &mut coin::TreasuryCap<COIN>, amount: u64, ctx: &mut TxContext){
         let coin_object = coin::mint(cap, amount, ctx);
         transfer::public_transfer(coin_object, ctx.sender());
     }
 
-    public fun burnCoinObject(cap: &mut coin::TreasuryCap<COIN>, coin_object: coin::Coin<COIN>) {
+    public entry fun burnCoinObject(cap: &mut coin::TreasuryCap<COIN>, coin_object: coin::Coin<COIN>) {
         coin::burn(cap, coin_object);
     }
     
