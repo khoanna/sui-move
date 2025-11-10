@@ -72,4 +72,14 @@ module game::game {
         transfer::transfer(shield, ctx.sender());
     }
 
+    #[test_only]
+    public fun init_for_testing(ctx: &mut TxContext) {
+        init(ctx);
+    }
+
+    #[test_only]
+    public fun get_hero_attributes(hero: &Hero): (u8, u8) {
+        (hero.power, hero.defense)
+    }
+
 }

@@ -17,5 +17,10 @@ module hello_move::hello_move{
     public fun update_greeting(greeting: &mut Greeting, new_text: string::String) {
         greeting.text = new_text;
     }
+
+    public fun get_text(g: &Greeting): string::String {
+        g.text
+    }
+
 }
 

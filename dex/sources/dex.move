@@ -37,10 +37,10 @@ module dex::dex {
             total_share: l0,
             fee_bps,
         };
-        transfer::share_object(pool);
-
         let pair_id = object::id(&pool);
         let lp = LPShare { id: object::new(ctx), pair_id, amount: l0 };
+
+        transfer::share_object(pool);
         transfer::transfer(lp, ctx.sender());
     }
 
@@ -145,5 +145,10 @@ module dex::dex {
         coin::join(&mut pool.coin_y, in_y);
         let out_x = coin::split(&mut pool.coin_x, out, ctx);
         transfer::public_transfer(out_x, ctx.sender());
+    }
+
+    #[test_only]
+    public fun get_share_amount(lp: &LPShare): u64 {
+        lp.amount
     }
 }
