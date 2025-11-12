@@ -418,38 +418,3 @@ export type Game = {
 };
 ```
 
-## 🐛 Common Issues
-
-### 1. "Incorrect number of arguments"
-**Solution**: Make sure you pass all required arguments to contract functions
-
-### 2. "Object not found"
-**Solution**: Check that PACKAGE_ID and MAPPING_ID are correct in constants.ts
-
-### 3. "Transaction failed"
-**Solution**: Ensure you have enough SUI in your wallet for gas fees
-
-## 🔒 Security Considerations
-
-- ✅ Randomness is cryptographically secure (Sui Random module)
-- ✅ Game state stored on-chain (tamper-proof)
-- ✅ One game per user (prevents spam)
-- ✅ No private keys stored in frontend
-
-## 📜 License
-
-MIT License - feel free to use this code for learning and building!
-
-## 🤝 Contributing
-
-Contributions welcome! Please feel free to submit a Pull Request.
-
-## 📧 Contact
-
-For questions or suggestions, please open an issue on GitHub.
-
----
-
-**Built with ❤️ on Sui Blockchain**
-
-![Sui Logo](https://via.placeholder.com/150x50/4da2ff/ffffff?text=Sui)
