@@ -38,7 +38,7 @@ module contract::contract {
         transfer::share_object(board)
     }
 
-    entry fun play_game(playing: &mut PlayingBoard,board: &mut Board, position: u8,  ctx: &TxContext) {
+    entry fun play_game(playing: &mut PlayingBoard, board: &mut Board, position: u8,  ctx: &TxContext) {
         // Verify game not ended
         assert!(!board.ended, 0);
 

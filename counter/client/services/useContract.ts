@@ -41,9 +41,9 @@ export default function useContract({setCounterValue}: {setCounterValue: (value:
       {transaction: tx},
       {
         onSuccess: async (res) => {
-            await client.waitForTransaction({
-                digest: res.digest,
-            })
+              await client.waitForTransaction({
+                  digest: res.digest,
+              })
             await fetchCounter();
             setTransactionLoading(false);
         },
