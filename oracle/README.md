@@ -680,16 +680,6 @@ On display: 25500 ÷ 1000 = 25.5°C
 **Cause**: Invalid API key or rate limit exceeded
 **Solution**: Check OpenWeatherMap API key and usage limits
 
-## 👥 Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request.
-
----
-
-## 📧 Contact
-
-For questions or support, please open an issue on GitHub.
-
 ---
 
 **Built with ❤️ on Sui Blockchain**
