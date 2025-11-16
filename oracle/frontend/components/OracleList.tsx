@@ -1,6 +1,6 @@
 "use client";
 
-import { Oracle } from "@/type/Oracle";
+import { Oracle, EnrichedOracle } from "@/type/Oracle";
 import { useState, useEffect } from "react";
 import useContract from "@/hook/useContract";
 import { useCurrentAccount } from "@mysten/dapp-kit";
@@ -15,7 +15,7 @@ export default function OracleList({ oracles, isLoading, onRefresh }: OracleList
   const account = useCurrentAccount();
   const { fetchOracleData, fetchUserPrediction, predict, claimPoint, contractLoading } = useContract({ address: account?.address });
   const [expandedId, setExpandedId] = useState<string | null>(null);
-  const [enrichedOracles, setEnrichedOracles] = useState<Oracle[]>([]);
+  const [enrichedOracles, setEnrichedOracles] = useState<EnrichedOracle[]>([]);
   const [loadingOracles, setLoadingOracles] = useState(false);
 
   // Fetch blockchain data for all oracles
@@ -38,20 +38,24 @@ export default function OracleList({ oracles, isLoading, onRefresh }: OracleList
 
               return {
                 ...oracle,
-                current_temp: oracleData?.temperature,
+                city: oracleData?.city,
+                temperature: oracleData?.temperature,
+                target_temp: oracleData?.target_temp,
+                target_time: oracleData?.target_time,
                 ended: oracleData?.ended,
+                current_temp: oracleData?.temperature,
                 user_prediction: userPrediction,
-              };
+              } as EnrichedOracle;
             } catch (error) {
               console.error(`Failed to enrich oracle ${oracle.id}:`, error);
-              return oracle;
+              return oracle as EnrichedOracle;
             }
           })
         );
         setEnrichedOracles(enriched);
       } catch (error) {
         console.error("Failed to enrich oracles:", error);
-        setEnrichedOracles(oracles);
+        setEnrichedOracles(oracles as EnrichedOracle[]);
       } finally {
         setLoadingOracles(false);
       }
@@ -60,7 +64,8 @@ export default function OracleList({ oracles, isLoading, onRefresh }: OracleList
     enrichOraclesData();
   }, [oracles, account?.address]);
 
-  const formatDate = (timestamp: number) => {
+  const formatDate = (timestamp?: number) => {
+    if (!timestamp) return "N/A";
     return new Date(timestamp).toLocaleString('en-US', {
       year: 'numeric',
       month: 'short',
@@ -70,7 +75,8 @@ export default function OracleList({ oracles, isLoading, onRefresh }: OracleList
     });
   };
 
-  const getTimeRemaining = (timestamp: number) => {
+  const getTimeRemaining = (timestamp?: number) => {
+    if (!timestamp) return "N/A";
     const now = Date.now();
     const diff = timestamp - now;
     
@@ -85,11 +91,12 @@ export default function OracleList({ oracles, isLoading, onRefresh }: OracleList
     return `${minutes}m remaining`;
   };
 
-  const isExpired = (timestamp: number) => {
+  const isExpired = (timestamp?: number) => {
+    if (!timestamp) return false;
     return timestamp < Date.now();
   };
 
-  const handlePredict = async (oracle: Oracle, prediction: boolean) => {
+  const handlePredict = async (oracle: EnrichedOracle, prediction: boolean) => {
     if (!account?.address) {
       alert("Please connect your wallet first");
       return;
@@ -114,7 +121,7 @@ export default function OracleList({ oracles, isLoading, onRefresh }: OracleList
     }
   };
 
-  const handleClaim = async (oracle: Oracle) => {
+  const handleClaim = async (oracle: EnrichedOracle) => {
     if (!account?.address) {
       alert("Please connect your wallet first");
       return;
@@ -201,21 +208,23 @@ export default function OracleList({ oracles, isLoading, onRefresh }: OracleList
               <div className="relative flex items-start justify-between">
                 <div className="flex-1">
                   <h3 className="text-xl font-bold text-white mb-1 truncate">
-                    {oracle.city_name}
+                    {oracle.city || "Loading..."}
                   </h3>
-                  <div className="flex items-center gap-2 text-white/90 text-sm">
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                    </svg>
-                    <span className="truncate">
-                      {oracle.latitude.toFixed(2)}, {oracle.longitude.toFixed(2)}
-                    </span>
-                  </div>
+                  {oracle.latitude && oracle.longitude && (
+                    <div className="flex items-center gap-2 text-white/90 text-sm">
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                      </svg>
+                      <span className="truncate">
+                        {oracle.latitude.toFixed(2)}, {oracle.longitude.toFixed(2)}
+                      </span>
+                    </div>
+                  )}
                 </div>
                 <div className="flex flex-col gap-2 items-end">
                   <div className="bg-white/20 backdrop-blur-sm rounded-lg px-3 py-1 text-white font-bold text-lg">
-                    {oracle.target_temp}°C
+                    {oracle.target_temp ? convertTemperature(oracle.target_temp) : "N/A"}°C
                   </div>
                   {oracle.current_temp !== undefined && (
                     <div className="bg-green-500/30 backdrop-blur-sm rounded-lg px-3 py-1 text-white text-sm font-semibold">

@@ -11,7 +11,7 @@ import { Oracle } from "@/type/Oracle";
 
 export default function Home() {
   const account = useCurrentAccount();
-  const { getOracles, oracleLoading } = useOracle();
+  const { getOracles } = useOracle();
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [oracles, setOracles] = useState<Oracle[]>([]);
@@ -19,7 +19,6 @@ export default function Home() {
 
   const isAdmin = account?.address === ADMIN_ADDRESS;
 
-  // Load oracles
   const loadOracles = async () => {
     setIsLoadingOracles(true);
     try {

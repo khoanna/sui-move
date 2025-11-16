@@ -69,18 +69,21 @@ The system consists of three main components:
 - Manages oracle creation, predictions, and point distribution
 - Ensures trustless and transparent game logic
 - Stores all data on-chain as shared objects
+- **Source of Truth**: All oracle data (city, temperature, target_temp, target_time, ended) stored on blockchain
 
 #### 2. **Backend Oracle Service**
 - Node.js/Express server acting as the oracle
 - Fetches real-time weather data from OpenWeatherMap API
 - Automatically updates blockchain state every 60 seconds
 - Provides REST API for frontend operations
+- **Database**: Only stores oracle IDs and coordinates for tracking updates
 
 #### 3. **Frontend Application**
 - Next.js 16 with React 19
 - Beautiful, responsive UI with Tailwind CSS v4
 - Integrates with Sui wallet using @mysten/dapp-kit
 - Real-time updates and optimistic UI patterns
+- **Data Fetching**: Retrieves all oracle data directly from blockchain via RPC
 
 ---
 
@@ -351,18 +354,20 @@ Response: [{ name, lat, lon, country, state }]
 
 ##### **POST /oracle**
 ```javascript
-// Create new oracle
+// Create new oracle (stores IDs in database for tracking)
 POST /oracle
-Body: { cityName, lat, lon, targetTemp, targetTime }
-Response: { oracle_id, predict_id }
+Body: { city_name, latitude, longitude, target_temp, target_time }
+Response: { success: true, oracle: { id, predict_id, latitude, longitude } }
 ```
 
 ##### **GET /oracles**
 ```javascript
-// Get all oracles
+// Get oracle IDs and coordinates (frontend fetches full data from blockchain)
 GET /oracles
-Response: [{ id, predict_id, city_name, latitude, longitude, target_temp, target_time }]
+Response: [{ id, predict_id, latitude, longitude }]
 ```
+
+**Note**: Backend database only stores minimal tracking data. All oracle details (city name, temperatures, timestamps, status) are fetched by frontend directly from blockchain via Sui RPC.
 
 ---
 
@@ -501,10 +506,10 @@ oracle/
 │   ├── service/
 │   │   └── oracle.js          # Blockchain interactions
 │   ├── database/
-│   │   └── mock.js            # In-memory storage
+│   │   └── mock.js            # In-memory storage (IDs + coordinates only)
 │   ├── lib/
 │   │   └── constants.js       # Constants (TEMP_DECIMAL=1000)
-│   ├── index.js               # Express server + auto-update
+│   ├── index.js               # Express server + auto-update loop
 │   └── package.json
 │
 ├── frontend/                   # Web app (Next.js)
@@ -522,11 +527,44 @@ oracle/
 │   ├── lib/
 │   │   └── constant.ts        # Constants
 │   └── type/
-│       ├── Oracle.ts          # Oracle type
+│       ├── Oracle.ts          # Oracle types (base & enriched)
 │       └── City.ts            # City type
 │
 └── README.md                   # This file
 ```
+
+### Data Architecture
+
+**Backend Database (mock.js)**:
+```javascript
+// Only stores minimal tracking data
+[
+  {
+    id: "0xabc...",              // Oracle object ID
+    predict_id: "0xdef...",      // UserPrediction object ID
+    latitude: 51.51,             // For weather API calls
+    longitude: -0.13             // For weather API calls
+  }
+]
+```
+
+**Blockchain (Source of Truth)**:
+```move
+// WeatherOracle object stores complete data
+WeatherOracle {
+  id: UID,
+  city: "London",                // City name
+  temperature: 25500,            // Current temp (25.5°C × 1000)
+  target_temp: 26000,            // Target temp (26°C × 1000)
+  target_time: 1700000000000,    // Deadline timestamp
+  ended: false                   // Status flag
+}
+```
+
+**Frontend Workflow**:
+1. Fetch oracle IDs from backend API
+2. Fetch full oracle data from blockchain via Sui RPC
+3. Enrich and display complete information
 
 ---
 
@@ -541,9 +579,20 @@ User → Connect Sui Wallet → Frontend stores address
 
 #### **2. View Oracles**
 ```
-Frontend → GET /oracles → Backend → Returns oracle list
-Frontend → fetchOracleData() → Sui RPC → Returns on-chain data
-Frontend → Merges and displays oracle cards
+Frontend → GET /oracles → Backend → Returns [{ id, predict_id, latitude, longitude }]
+  ↓
+Frontend → fetchOracleData(id) → Sui RPC → Returns full oracle data from blockchain
+  {
+    city: "London",
+    temperature: 25500 (25.5°C × 1000),
+    target_temp: 26000 (26°C × 1000),
+    target_time: 1700000000000,
+    ended: false
+  }
+  ↓
+Frontend → Enriches oracle list with blockchain data
+  ↓
+Frontend → Displays oracle cards with complete information
 ```
 
 #### **3. Make Prediction**
@@ -564,16 +613,19 @@ Frontend updates UI optimistically
 #### **4. Oracle Updates (Background)**
 ```
 Every 60 seconds:
-Backend → Fetch all oracles from database
+Backend → Fetch all oracle records from database [{ id, latitude, longitude }]
   ↓
 For each oracle:
-  Backend → Fetch weather from OpenWeatherMap API
-  Backend → Check if expired (now >= target_time)
+  Backend → Fetch current weather from OpenWeatherMap API
+            using stored latitude & longitude
+  Backend → Calculate if ended (now >= target_time from blockchain)
   Backend → Build transaction with update_weather_oracle
   Backend → Sign with admin keypair
-  Backend → Submit to blockchain
-  Backend → Wait 1 second (avoid conflicts)
+  Backend → Submit to blockchain (updates temperature & ended flag)
+  Backend → Wait 1 second (avoid ADMIN_CAP conflicts)
 ```
+
+**Why store coordinates?**: Backend needs lat/lon to fetch weather updates from OpenWeatherMap API. All other data lives on blockchain.
 
 #### **5. Claim Points**
 ```
@@ -644,6 +696,42 @@ NEXT_PUBLIC_ADMIN_ADDRESS=0x...
 
 ---
 
+## 🎯 Design Rationale
+
+### Why Blockchain-First Architecture?
+
+**Decision**: Store all oracle data on blockchain, backend only tracks IDs and coordinates.
+
+**Benefits**:
+1. **Transparency**: All oracle data is publicly verifiable on-chain
+2. **Trustless**: Users can verify oracle state without trusting backend
+3. **Decentralization**: Frontend can read directly from blockchain
+4. **Data Integrity**: Blockchain is immutable source of truth
+5. **Auditability**: All state changes recorded on-chain
+
+**Trade-offs**:
+- Frontend makes additional RPC calls to fetch blockchain data
+- Slightly higher latency for initial page load
+- More blockchain read operations
+
+**Why it's worth it**: In a prediction market, trust and transparency are paramount. Users need to verify that oracle results weren't manipulated.
+
+### Backend Role
+
+The backend serves two specific purposes:
+
+1. **Oracle Updates**: Acts as trusted oracle to update weather data
+   - Needs coordinates to call OpenWeatherMap API
+   - Only updates temperature and ended flag on blockchain
+   
+2. **Discovery**: Provides list of active oracle IDs
+   - Frontend can discover all oracles without scanning blockchain
+   - Lightweight database keeps track of created oracles
+
+**What backend doesn't do**: Store or serve oracle business logic data (temperatures, deadlines, predictions, points). All retrieved from blockchain.
+
+---
+
 ## 📊 Temperature Precision
 
 **Problem**: Move doesn't support floating-point numbers
@@ -679,6 +767,37 @@ On display: 25500 ÷ 1000 = 25.5°C
 ### 4. "Failed to fetch weather"
 **Cause**: Invalid API key or rate limit exceeded
 **Solution**: Check OpenWeatherMap API key and usage limits
+
+### 5. "Cannot read property 'city' of undefined"
+**Cause**: Frontend trying to display oracle data before blockchain fetch completes
+**Solution**: Use optional chaining (`oracle?.city`) and loading states. The enrichment process fetches data asynchronously.
+
+### 6. "Oracle list shows but no details"
+**Cause**: Blockchain RPC calls failing or slow
+**Solution**: 
+- Check Sui RPC endpoint is accessible
+- Verify oracle IDs are correct
+- Check browser console for RPC errors
+- Frontend has loading states while fetching from blockchain
+
+---
+
+## 💡 Best Practices
+
+### For Developers
+
+1. **Always fetch from blockchain**: Don't trust backend for oracle state
+2. **Handle async loading**: Oracle data enrichment takes time
+3. **Use TypeScript types**: `Oracle` (from API) vs `EnrichedOracle` (with blockchain data)
+4. **Optimize RPC calls**: Batch requests when possible with `Promise.all()`
+5. **Test with real blockchain**: Mock data won't reflect actual latency
+
+### For Users
+
+1. **Verify on-chain**: Check oracle data directly on Sui Explorer
+2. **Wait for confirmations**: Transactions need time to finalize
+3. **Check deadlines**: Can't predict after oracle expires
+4. **Claim promptly**: Claim points after oracle ends and you win
 
 ---
 

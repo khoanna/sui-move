@@ -1,16 +1,23 @@
+// Data from backend (only IDs + coordinates)
 export interface Oracle {
     id: string;
     predict_id: string;
-    city_name: string;
-    latitude: number;
-    longitude: number;
-    target_time: number;
-    target_temp: number;
-    current_temp?: number; // Current temperature from blockchain
-    ended?: boolean; // Oracle status
-    user_prediction?: boolean | null; // User's prediction (null if not predicted yet)
+    latitude?: number;
+    longitude?: number;
 }
 
+// Data enriched from blockchain
+export interface EnrichedOracle extends Oracle {
+    city?: string;
+    temperature?: number;
+    target_temp?: number;
+    target_time?: number;
+    ended?: boolean;
+    user_prediction?: boolean | null;
+    current_temp?: number; // Current temperature from blockchain
+}
+
+// Blockchain oracle object structure
 export interface OracleObject {
     id: string;
     city: string;

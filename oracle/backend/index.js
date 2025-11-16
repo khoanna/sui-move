@@ -49,11 +49,8 @@ app.post("/oracle", async (req, res) => {
     const newOracle = {
       id: result.oracleId,
       predict_id: result.userPredictionId,
-      city_name,
       latitude,
       longitude,
-      target_time,
-      target_temp
     };
     
     DB.push(newOracle);
@@ -89,12 +86,12 @@ setInterval(async () => {
       const temperatureK = data.main.temp;
       const temperatureC = Math.round((temperatureK - 273.15) * 100) / 100;
       const ended = Date.now() > oracle.target_time; // target_time is in milliseconds
-      console.log(`Updating oracle ${oracle.city_name}: temp=${temperatureC}°C, ended=${ended}`);
+      console.log(`Updating oracle ${oracle.latitude}, ${oracle.longitude}: temp=${temperatureC}°C, ended=${ended}`);
       await updateOracles(oracle.id, temperatureC, ended);
-      console.log(`✓ Updated oracle ${oracle.city_name}`);
+      console.log(`✓ Updated oracle ${oracle.latitude}, ${oracle.longitude}`);
       await new Promise(resolve => setTimeout(resolve, 1000));
     } catch (error) {
-      console.error(`Failed to update oracle ${oracle.city_name}:`, error.message);
+      console.error(`Failed to update oracle ${oracle.latitude}, ${oracle.longitude}:`, error.message);
     }
   }
 }, ONE_MINUTE_MS);

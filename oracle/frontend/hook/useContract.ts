@@ -221,6 +221,10 @@ export default function useContract({address}: {address?: string}) {
       };
     };
     const pointParentId = content.fields?.mapping?.fields?.id?.id;
+    if (!pointParentId) {
+      setContractLoading(false);
+      return;
+    }
     const fields = await client.getDynamicFields({
       parentId: pointParentId,
     });
