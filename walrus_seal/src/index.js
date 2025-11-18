@@ -1,10 +1,10 @@
 import {SuiClient, getFullnodeUrl} from "@mysten/sui/client";
-import {SealClient, SessionKey} from "@mysten/seal";
+import {SealClient} from "@mysten/seal";
 import {Ed25519Keypair} from "@mysten/sui/keypairs/ed25519";
-import {Transaction} from "@mysten/sui/transactions";
 import {randomBytes} from "crypto";
 import dotenv from "dotenv";
-import {fromHex} from "@mysten/sui/utils";
+import encrypt from "./encrypt.js";
+import decrypt from "./decrypt.js";
 dotenv.config();
 
 const serverObjectIds = [
@@ -13,66 +13,22 @@ const serverObjectIds = [
 ];
 const keypair = Ed25519Keypair.fromSecretKey(process.env.PHRASE);
 const suiClient = new SuiClient({url: getFullnodeUrl("testnet")});
+const message = "Hello, World!";
+const sealClient = new SealClient({
+  suiClient,
+  serverConfigs: serverObjectIds.map((id) => ({
+    objectId: id,
+    weight: 1,
+  })),
+  verifyKeyServers: false,
+});
+const dataId = randomBytes(16).toString("hex");
 
 async function main() {
-  const sealClient = new SealClient({
-    suiClient,
-    serverConfigs: serverObjectIds.map((id) => ({
-      objectId: id,
-      weight: 1,
-    })),
-    verifyKeyServers: false,
-  });
-
-  const dataId = randomBytes(16).toString("hex");
-  console.log("Data ID:", dataId);
-
-  const {encryptedObject: encryptedBytes, key: backupKey} =
-    await sealClient.encrypt({
-      threshold: 2,
-      packageId: process.env.PACKAGE,
-      id: dataId,
-      data: new TextEncoder().encode("Hello, Seal!"),
-    });
-
+  const {encryptedBytes} = await encrypt(message, sealClient, dataId);
   console.log("Encrypted:", encryptedBytes);
-  console.log("Backup key:", backupKey);
 
-  const sessionKey = await SessionKey.create({
-    address: keypair.getPublicKey().toSuiAddress(),
-    packageId: process.env.PACKAGE,
-    ttlMin: 10,
-    suiClient: suiClient,
-  });
-
-  const message = sessionKey.getPersonalMessage();
-  const {signature} = await keypair.signPersonalMessage(message);
-  sessionKey.setPersonalMessageSignature(signature);
-
-  const tx = new Transaction();
-
-  tx.moveCall({
-    target: `${process.env.PACKAGE}::policy::seal_approve`,
-    arguments: [
-      tx.pure.vector("u8", Array.from(fromHex(dataId))),
-      tx.object(process.env.NFT_OBJECT_ID),
-    ],
-  });
-
-  const result = await suiClient.signAndExecuteTransaction({
-    signer: keypair,
-    transaction: tx,
-  });
-  const txBytes = await tx.build({
-    client: suiClient,
-    onlyTransactionKind: true,
-  });
-  const decryptedBytes = await sealClient.decrypt({
-    data: encryptedBytes,
-    sessionKey,
-    txBytes,
-  });
-
+  const decryptedBytes = await decrypt(keypair, suiClient, sealClient, dataId, encryptedBytes);
   console.log("Decrypted:", new TextDecoder().decode(decryptedBytes));
 }
 
