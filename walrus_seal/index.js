@@ -2,9 +2,14 @@ import {SuiClient, getFullnodeUrl} from "@mysten/sui/client";
 import {SealClient} from "@mysten/seal";
 import {Ed25519Keypair} from "@mysten/sui/keypairs/ed25519";
 import {randomBytes} from "crypto";
+
 import dotenv from "dotenv";
-import encrypt from "./encrypt.js";
-import decrypt from "./decrypt.js";
+import fs from "fs/promises";
+import encrypt from "./src/seal/encrypt.js";
+import decrypt from "./src/seal/decrypt.js";
+import upload from "./src/walrus/store.js";
+import fetchBlob from "./src/walrus/get.js";
+
 dotenv.config();
 
 const serverObjectIds = [
@@ -13,7 +18,6 @@ const serverObjectIds = [
 ];
 const keypair = Ed25519Keypair.fromSecretKey(process.env.PHRASE);
 const suiClient = new SuiClient({url: getFullnodeUrl("testnet")});
-const message = "Hello, World!";
 const sealClient = new SealClient({
   suiClient,
   serverConfigs: serverObjectIds.map((id) => ({
@@ -24,12 +28,20 @@ const sealClient = new SealClient({
 });
 const dataId = randomBytes(16).toString("hex");
 
+const textInput = new TextEncoder().encode("Hello, World!");
+const fileInput = await fs.readFile("input.txt");
+
 async function main() {
-  const {encryptedBytes} = await encrypt(message, sealClient, dataId);
+  const {encryptedBytes} = await encrypt(fileInput, sealClient, dataId);
   console.log("Encrypted:", encryptedBytes);
 
-  const decryptedBytes = await decrypt(keypair, suiClient, sealClient, dataId, encryptedBytes);
-  console.log("Decrypted:", new TextDecoder().decode(decryptedBytes));
+  const walrusResponse = await upload(encryptedBytes, 5);
+
+  const blobId = walrusResponse.newlyCreated.blobObject.blobId;
+  const storedBytes = await fetchBlob(blobId);
+
+  const decryptedBytes = await decrypt(keypair, suiClient, sealClient, dataId, new Uint8Array(storedBytes));
+  await fs.writeFile("output.txt", Buffer.from(decryptedBytes));
 }
 
 main().catch((error) => {
