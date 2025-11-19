@@ -22,7 +22,7 @@ A secure file storage solution that combines **Sui Seal's end-to-end encryption*
                             │
                             ▼
   ┌─────────────────────────────┐
-  │       Sui Seal (Encryption)  │
+  │       Sui Seal (Encryption) │
   └─────────────────────────────┘
 ```
 
