@@ -12,7 +12,9 @@
   "dependencies": {
     "@mysten/seal": "^0.9.4",
     "@mysten/sui": "^1.45.0",
+    "cors": "^2.8.5",
     "dotenv": "^17.2.3",
+    "express": "^5.1.0",
     "fs": "^0.0.1-security"
   }
 }
