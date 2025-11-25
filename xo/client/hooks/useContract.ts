@@ -132,7 +132,7 @@ export default function useContract(address?: string, setCurrentBoard?: React.Di
     tx.moveCall({
       target:
         `${PACKAGE_ID}::contract::play_game`,
-      typeArguments: [],
+      typeArguments: [],  
       arguments: [
         tx.object(PLAYING_BOARD_ID),
         tx.object(currentBoardId),

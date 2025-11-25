@@ -1,15 +1,15 @@
-import { useSuiClient } from "@mysten/dapp-kit";
+import {sealClient} from "@/lib/constant";
+import {useCurrentWallet} from "@mysten/dapp-kit";
 import {useState} from "react";
 
 export default function useFile() {
   const [fileLoading, setFileLoading] = useState(false);
-  const client = useSuiClient();
 
   const uploadFile = async (file: File) => {
     setFileLoading(true);
     try {
       const arrayBuffer = await file.arrayBuffer();
-      
+
       const response = await fetch("http://localhost:4000/upload", {
         method: "POST",
         headers: {
@@ -19,7 +19,9 @@ export default function useFile() {
       });
 
       if (!response.ok) {
-        throw new Error(`Upload failed: ${response.status} ${response.statusText}`);
+        throw new Error(
+          `Upload failed: ${response.status} ${response.statusText}`
+        );
       }
 
       const result = await response.json();
@@ -44,7 +46,7 @@ export default function useFile() {
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = "file"; 
+      a.download = "file";
       document.body.appendChild(a);
       a.click();
       a.remove();

@@ -11,6 +11,6 @@ module policy::policy {
         transfer::public_transfer(nft, ctx.sender());
     }
  
-    entry fun seal_approve( _id: vector<u8>, _nft: &NFT) {}
+    entry fun seal_approve(_id: vector<u8>, _nft: &NFT) {}
 
 }
