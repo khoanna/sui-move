@@ -19,7 +19,7 @@ export default function useContract(address: string) {
     const tx = new Transaction();
 
     tx.moveCall({
-      target: `${PACKAGE_ID}::lock::lock_asset`,
+      target: `${PACKAGE_ID}::lock::entry_lock`,
       typeArguments: [typeAsset],
       arguments: [tx.object(assetId)],
     });
@@ -145,7 +145,7 @@ export default function useContract(address: string) {
     const tx = new Transaction();
 
     tx.moveCall({
-      target: `${PACKAGE_ID}::escrow::cancel_escrow`,
+      target: `${PACKAGE_ID}::escrow::cancel`,
       typeArguments: [escrowAssetType],
       arguments: [tx.object(escrowId)],
     });
